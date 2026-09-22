@@ -16,7 +16,7 @@ import net.runelite.client.plugins.PluginDescriptor;
     description = "Safe Text Filter: Blocks travel, cape, jewelry, item, and spell names inside Mortimer's cave without interfering with standard items",
     tags = {"ironman", "teleport", "mortimer", "guard", "wyrmscraig", "cape", "ardougne", "block", "stop"}
 )
-public class ExamplePlugin extends Plugin
+public class PreventTpAtMortimerPlugin extends Plugin
 {
     @Inject
     private Client client;
