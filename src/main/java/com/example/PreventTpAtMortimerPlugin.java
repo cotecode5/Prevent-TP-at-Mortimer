@@ -12,7 +12,6 @@ import net.runelite.client.plugins.PluginDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Slf4j
 @PluginDescriptor(
     name = "Prevent TP at Mortimer",
     description = "Safe Text Filter: Blocks travel, cape, jewelry, item, and spell names inside Mortimer's cave without interfering with standard items",
