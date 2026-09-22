@@ -6,7 +6,6 @@ import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
-import net.runelite.api.WidgetID;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.config.ConfigManager;
