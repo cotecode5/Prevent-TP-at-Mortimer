@@ -9,6 +9,8 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Slf4j
 @PluginDescriptor(
@@ -17,12 +19,15 @@ import net.runelite.client.plugins.PluginDescriptor;
     tags = {"ironman", "teleport", "mortimer", "guard", "wyrmscraig", "cape", "ardougne", "block", "stop"}
 )
 public class PreventTpAtMortimerPlugin extends Plugin
+    
 {
+    private static final Logger log = LoggerFactory.getLogger(PreventTpAtMortimerPlugin.class);
+    
     @Inject
     private Client client;
 
     @Inject
-    private ExampleConfig config;
+    private PreventTpAtMortimer config;
 
     // Region ID 5463 maps explicitly to Wyrmscraig Cavern where Mortimer stands
     private static final int WYRMSCRAIG_CAVERN_REGION_ID = 5463;
@@ -153,8 +158,8 @@ public class PreventTpAtMortimerPlugin extends Plugin
     }
 
     @Provides
-    ExampleConfig provideConfig(ConfigManager configManager)
+    PreventTpAtMortimer provideConfig(ConfigManager configManager)
     {
-        return configManager.getConfig(ExampleConfig.class);
+        return configManager.getConfig(PreventTpAtMortimer.class);
     }
 }
