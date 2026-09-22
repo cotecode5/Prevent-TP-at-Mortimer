@@ -6,7 +6,6 @@ import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
-import net.runelite.api.Widget;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -111,18 +110,8 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String target = normalize(event.getMenuTarget());
 
         /*
-         * ------------------------------------------------------------
-         * 1. DIRECT TELEPORT / TRAVEL TEXT
-         * ------------------------------------------------------------
-         *
-         * This catches things such as:
-         *
-         * Teleport
-         * Tele
-         * Teleport to...
-         * Travel
-         * Minigame teleport
-         * Home
+         * First line of defense:
+         * anything whose visible menu text clearly says teleport/travel.
          */
         if (containsTeleportText(option) || containsTeleportText(target))
         {
@@ -130,57 +119,31 @@ public class PreventTpAtMortimerPlugin extends Plugin
         }
 
         /*
-         * ------------------------------------------------------------
-         * 2. INVENTORY ITEM OPERATIONS
-         * ------------------------------------------------------------
-         *
-         * RuneLite explicitly exposes whether this menu entry is
-         * an item operation and which item generated it.
+         * Item actions such as Rub, Break, Activate, etc.
          */
         if (event.isItemOp())
         {
-            return isTeleportItemOperation(event, option, target);
+            return isTeleportItemOperation(option, target);
         }
 
         /*
-         * ------------------------------------------------------------
-         * 3. WIDGET / INTERFACE ACTIONS
-         * ------------------------------------------------------------
-         *
-         * Spellbook, minigame interface, jewellery interfaces,
-         * equipment interfaces, etc.
+         * Widget actions include spellbook and interface clicks.
          */
         if (isWidgetAction(event.getMenuAction()))
         {
-            return isTeleportWidgetAction(event, option, target);
+            return isTeleportWidgetAction(option, target);
         }
 
-        /*
-         * ------------------------------------------------------------
-         * 4. GENERAL FALLBACK
-         * ------------------------------------------------------------
-         */
         return false;
     }
 
-    private boolean isTeleportItemOperation(
-        MenuOptionClicked event,
-        String option,
-        String target)
+    private boolean isTeleportItemOperation(String option, String target)
     {
-        /*
-         * Directly named teleport operations.
-         */
         if (containsTeleportText(option) || containsTeleportText(target))
         {
             return true;
         }
 
-        /*
-         * These are common activation verbs used by teleport items.
-         *
-         * We only consider them for actual item operations.
-         */
         if (option.equals("rub")
             || option.equals("break")
             || option.equals("tele")
@@ -193,55 +156,11 @@ public class PreventTpAtMortimerPlugin extends Plugin
         return false;
     }
 
-    private boolean isTeleportWidgetAction(
-        MenuOptionClicked event,
-        String option,
-        String target)
+    private boolean isTeleportWidgetAction(String option, String target)
     {
         /*
-         * A widget action containing an explicit teleport/travel
-         * destination is almost certainly a teleport action.
-         */
-        if (containsTeleportText(option) || containsTeleportText(target))
-        {
-            return true;
-        }
-
-        Widget widget = event.getWidget();
-
-        if (widget == null)
-        {
-            return false;
-        }
-
-        /*
-         * Inspect the actions belonging to the clicked widget.
-         *
-         * This is considerably more useful than assuming param1
-         * is always a widget ID.
-         */
-        String[] actions = widget.getActions();
-
-        if (actions != null)
-        {
-            for (String action : actions)
-            {
-                if (action == null)
-                {
-                    continue;
-                }
-
-                if (containsTeleportText(normalize(action)))
-                {
-                    return true;
-                }
-            }
-        }
-
-        /*
-         * Spellbook actions commonly arrive as "Cast".
-         *
-         * If the target identifies a teleport spell, block it.
+         * Spellbook teleport actions normally appear as "Cast"
+         * with the spell name as the target.
          */
         if (option.equals("cast"))
         {
@@ -263,9 +182,6 @@ public class PreventTpAtMortimerPlugin extends Plugin
             case WIDGET_FOURTH_OPTION:
             case WIDGET_FIFTH_OPTION:
             case WIDGET_TARGET:
-            case WIDGET_TYPE_1:
-            case WIDGET_TYPE_4:
-            case WIDGET_TYPE_5:
                 return true;
 
             default:
@@ -282,8 +198,8 @@ public class PreventTpAtMortimerPlugin extends Plugin
 
         return text.contains("teleport")
             || text.equals("tele")
-            || text.contains("tele ")
             || text.startsWith("tele ")
+            || text.contains(" teleport")
             || text.contains("minigame")
             || text.contains("travel")
             || text.contains("destination")
@@ -307,8 +223,7 @@ public class PreventTpAtMortimerPlugin extends Plugin
             || target.contains("tele")
             || target.contains("home")
             || target.contains("house")
-            || target.contains("to target")
-            || target.contains("bake pie");
+            || target.contains("to target");
     }
 
     private boolean looksLikeTeleportItem(String target)
@@ -318,13 +233,6 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return false;
         }
 
-        /*
-         * Item-name fallback.
-         *
-         * This is intentionally much smaller than the previous
-         * giant list. We are looking for classes of items that
-         * actually provide teleport functionality.
-         */
         return target.contains("teleport")
             || target.contains("tablet")
             || target.contains("scroll")
