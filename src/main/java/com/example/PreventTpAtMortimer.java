@@ -5,7 +5,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 @ConfigGroup("preventtpatmortimer")
-public interface ExampleConfig extends Config
+public interface PreventTpAtMortimerConfig extends Config
 {
     @ConfigItem(
         keyName = "enableGuard",
