@@ -5,12 +5,12 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
 @ConfigGroup("preventtpatmortimer")
-public interface PreventTpAtMortimerConfig extends Config
+public interface ExampleConfig extends Config
 {
     @ConfigItem(
         keyName = "enableGuard",
         name = "Enable Teleport Guard",
-        description = "Blocks teleports inside Wyrmscraig Cavern to save UIM boat placement"
+        description = "Blocks all item/cape teleports inside Wyrmscraig Cavern to save boat placement"
     )
     default boolean enableGuard()
     {
