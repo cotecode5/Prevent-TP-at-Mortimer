@@ -40,7 +40,7 @@ public class PreventTpAtMortimerPlugin extends Plugin
      * The region check alone is NOT enough because a region is
      * larger than the cavern.
      */
-    private static final int WYRMSCRAIG_REGION_ID = 5463;
+    private static final int WYRMSCRAIG_CAVERN_REGION_ID = 10374;
 
     /*
      * Music track used inside Wyrmscraig Cavern.
