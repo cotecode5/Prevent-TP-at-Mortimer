@@ -67,6 +67,11 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return;
         }
 
+        if (config.debugLogging())
+        {
+            debugMenuAction(event);
+        }
+
         if (!isTeleportOrTravelAction(event))
         {
             return;
@@ -92,9 +97,87 @@ public class PreventTpAtMortimerPlugin extends Plugin
         client.addChatMessage(
             ChatMessageType.GAMEMESSAGE,
             "",
-            "Teleport/travel blocked - you are inside Wyrmscraig Cavern.",
+            "Teleport blocked — don't forget about your boat!",
             null
         );
+    }
+
+    private void debugMenuAction(MenuOptionClicked event)
+    {
+        Widget widget = event.getWidget();
+
+        log.info(
+            "DEBUG MENU: action={}, option='{}', target='{}', id={}, itemId={}, itemOp={}, param0={}, param1={}, widget={}",
+            event.getMenuAction(),
+            clean(event.getMenuOption()),
+            clean(event.getMenuTarget()),
+            event.getId(),
+            event.getItemId(),
+            event.getItemOp(),
+            event.getParam0(),
+            event.getParam1(),
+            describeWidget(widget)
+        );
+
+        if (widget == null)
+        {
+            return;
+        }
+
+        String[] actions = widget.getActions();
+
+        if (actions == null)
+        {
+            log.info("DEBUG WIDGET: no widget actions");
+            return;
+        }
+
+        StringBuilder actionList = new StringBuilder();
+
+        for (int i = 0; i < actions.length; i++)
+        {
+            if (actions[i] == null)
+            {
+                continue;
+            }
+
+            if (actionList.length() > 0)
+            {
+                actionList.append(" | ");
+            }
+
+            actionList
+                .append(i)
+                .append(": ")
+                .append(clean(actions[i]));
+        }
+
+        log.info(
+            "DEBUG WIDGET ACTIONS: {}",
+            actionList
+        );
+    }
+
+    private String describeWidget(Widget widget)
+    {
+        if (widget == null)
+        {
+            return "null";
+        }
+
+        return "id="
+            + widget.getId()
+            + ", type="
+            + widget.getType()
+            + ", itemId="
+            + widget.getItemId()
+            + ", itemQuantity="
+            + widget.getItemQuantity()
+            + ", index="
+            + widget.getIndex()
+            + ", text='"
+            + clean(widget.getText())
+            + "'";
     }
 
     private boolean isInsideWyrmscraigCavern()
