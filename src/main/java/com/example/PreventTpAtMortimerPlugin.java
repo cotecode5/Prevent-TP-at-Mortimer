@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
         "wyrmscraig",
         "boat",
         "cave",
+        "safety",
         "travel"
     }
 )
@@ -33,7 +34,20 @@ public class PreventTpAtMortimerPlugin extends Plugin
     private static final Logger log =
         LoggerFactory.getLogger(PreventTpAtMortimerPlugin.class);
 
-    private static final int WYRMSCRAIG_CAVERN_REGION_ID = 5463;
+    /*
+     * Wyrmscraig region.
+     *
+     * The region check alone is NOT enough because a region is
+     * larger than the cavern.
+     */
+    private static final int WYRMSCRAIG_REGION_ID = 5463;
+
+    /*
+     * Music track used inside Wyrmscraig Cavern.
+     *
+     * Lurking Threats is the cavern music track.
+     */
+    private static final int WYRMSCRAIG_CAVERN_MUSIC_ID = 838;
 
     @Inject
     private Client client;
@@ -103,9 +117,21 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return false;
         }
 
-        return client.getLocalPlayer()
-            .getWorldLocation()
-            .getRegionID() == WYRMSCRAIG_CAVERN_REGION_ID;
+        /*
+         * First check Wyrmscraig.
+         */
+        if (client.getLocalPlayer().getWorldLocation().getRegionID()
+            != WYRMSCRAIG_REGION_ID)
+        {
+            return false;
+        }
+
+        /*
+         * Then distinguish the cavern from the island surface.
+         *
+         * Wyrmscraig Cavern uses the "Lurking Threats" music track.
+         */
+        return client.getCurrentMusicId() == WYRMSCRAIG_CAVERN_MUSIC_ID;
     }
 
     private boolean isTeleportOrTravelAction(MenuOptionClicked event)
@@ -113,42 +139,22 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option = clean(event.getMenuOption());
         String target = clean(event.getMenuTarget());
 
-        /*
-         * 1. Directly named teleport/travel actions.
-         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
             return true;
         }
 
-        /*
-         * 2. Inventory/item actions.
-         *
-         * This catches things such as:
-         * Rub glory
-         * Rub ring
-         * Break tablet
-         * Activate seed pod
-         * etc.
-         */
         if (event.isItemOp())
         {
             return isTeleportItemAction(event, option, target);
         }
 
-        /*
-         * 3. Spellbook/interface actions.
-         */
         if (isWidgetAction(event.getMenuAction()))
         {
             return isTeleportWidgetAction(event, option, target);
         }
 
-        /*
-         * 4. A few travel actions can be attached directly to
-         * game objects/NPCs rather than items or widgets.
-         */
         return isTravelWorldAction(event.getMenuAction(), option, target);
     }
 
@@ -157,22 +163,12 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option,
         String target)
     {
-        /*
-         * Explicit teleport wording always wins.
-         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
             return true;
         }
 
-        /*
-         * These are the common OSRS operations used by teleport items.
-         *
-         * We deliberately do NOT block every item operation because
-         * that would also prevent normal actions such as Eat, Drink,
-         * Wield, Wear, Drop, etc.
-         */
         if (option.equals("rub")
             || option.equals("break")
             || option.equals("activate"))
@@ -188,21 +184,11 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option,
         String target)
     {
-        /*
-         * Spellbook teleports generally appear as:
-         *
-         * Cast -> [spell name]
-         */
         if (option.equals("cast"))
         {
             return looksLikeTeleportSpell(target);
         }
 
-        /*
-         * Check the actual widget's available actions.
-         * This gives us another layer of protection when the visible
-         * menu option itself doesn't contain the word teleport.
-         */
         Widget widget = event.getWidget();
 
         if (widget == null)
@@ -238,10 +224,6 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option,
         String target)
     {
-        /*
-         * Only inspect actual world/object/NPC interaction actions.
-         * This avoids blocking unrelated interface clicks.
-         */
         switch (action)
         {
             case GAME_OBJECT_FIRST_OPTION:
