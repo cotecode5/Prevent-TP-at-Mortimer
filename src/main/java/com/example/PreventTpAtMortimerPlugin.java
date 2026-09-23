@@ -97,7 +97,7 @@ public class PreventTpAtMortimerPlugin extends Plugin
         client.addChatMessage(
             ChatMessageType.GAMEMESSAGE,
             "",
-            "Teleport blocked — don't forget about your boat!",
+            "Teleport blocked — don't leave your boat behind!",
             null
         );
     }
