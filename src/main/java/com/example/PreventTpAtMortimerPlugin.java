@@ -34,16 +34,6 @@ public class PreventTpAtMortimerPlugin extends Plugin
     private static final Logger log =
         LoggerFactory.getLogger(PreventTpAtMortimerPlugin.class);
 
-    /*
-     * Wyrmscraig Cavern is located in RuneLite region 10374.
-     *
-     * The cavern entrance, Mortimer area, and farthest reachable
-     * normal cavern area were all confirmed to be in this region.
-     *
-     * The small quest-only area in region 10375 is intentionally
-     * excluded because it is not part of the normal cavern area
-     * used after unlocking the island.
-     */
     private static final int WYRMSCRAIG_CAVERN_REGION_ID = 10374;
 
     @Inject
@@ -124,36 +114,31 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option = clean(event.getMenuOption());
         String target = clean(event.getMenuTarget());
 
-        /*
-         * Catch explicit teleport/travel wording first.
-         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
             return true;
         }
 
-        /*
-         * Item actions such as Rub, Break, Activate, etc.
-         */
-        if (event.isItemOp())
+        if (isTeleportItemAction(event, option, target))
         {
-            return isTeleportItemAction(event, option, target);
+            return true;
         }
 
-        /*
-         * Widget actions such as spellbook/clickable interface
-         * teleport actions.
-         */
-        if (isWidgetAction(event.getMenuAction()))
+        if (isTeleportWidgetAction(event, option, target))
         {
-            return isTeleportWidgetAction(event, option, target);
+            return true;
         }
 
-        /*
-         * World-object/NPC travel actions.
-         */
-        return isTravelWorldAction(event.getMenuAction(), option, target);
+        if (isTravelWorldAction(
+            event.getMenuAction(),
+            option,
+            target))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private boolean isTeleportItemAction(
@@ -161,19 +146,17 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option,
         String target)
     {
+        if (!event.isItemOp())
+        {
+            return false;
+        }
+
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
             return true;
         }
 
-        /*
-         * Common teleport-item interactions.
-         *
-         * We intentionally inspect the target text instead of
-         * relying only on item IDs, so new/unknown teleport items
-         * can still be caught when their names identify them.
-         */
         if (option.equals("rub")
             || option.equals("break")
             || option.equals("activate"))
@@ -189,12 +172,37 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option,
         String target)
     {
-        /*
-         * Spellbook cast actions.
-         */
+        MenuAction action = event.getMenuAction();
+
+        if (action == MenuAction.WIDGET_TARGET
+            || action == MenuAction.WIDGET_TARGET_ON_GAME_OBJECT
+            || action == MenuAction.WIDGET_TARGET_ON_NPC
+            || action == MenuAction.WIDGET_TARGET_ON_PLAYER
+            || action == MenuAction.WIDGET_TARGET_ON_GROUND_ITEM
+            || action == MenuAction.WIDGET_TARGET_ON_WIDGET)
+        {
+            if (looksLikeTeleportSpell(target)
+                || isExplicitTeleportText(option)
+                || isExplicitTeleportText(target))
+            {
+                return true;
+            }
+        }
+
+        if (!isWidgetAction(action))
+        {
+            return false;
+        }
+
         if (option.equals("cast"))
         {
             return looksLikeTeleportSpell(target);
+        }
+
+        if (isExplicitTeleportText(option)
+            || isExplicitTeleportText(target))
+        {
+            return true;
         }
 
         Widget widget = event.getWidget();
@@ -211,20 +219,14 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return false;
         }
 
-        /*
-         * Check all actions belonging to the widget.
-         * This helps catch interface-based teleport options
-         * whose visible menu text may not itself contain
-         * "teleport".
-         */
-        for (String action : actions)
+        for (String widgetAction : actions)
         {
-            if (action == null)
+            if (widgetAction == null)
             {
                 continue;
             }
 
-            if (isExplicitTeleportText(clean(action)))
+            if (isExplicitTeleportText(clean(widgetAction)))
             {
                 return true;
             }
@@ -250,5 +252,168 @@ public class PreventTpAtMortimerPlugin extends Plugin
             case NPC_THIRD_OPTION:
             case NPC_FOURTH_OPTION:
             case NPC_FIFTH_OPTION:
-                return isTravelWord(option
-```
+            case WORLD_ENTITY_FIRST_OPTION:
+            case WORLD_ENTITY_SECOND_OPTION:
+            case WORLD_ENTITY_THIRD_OPTION:
+            case WORLD_ENTITY_FOURTH_OPTION:
+            case WORLD_ENTITY_FIFTH_OPTION:
+                return isTravelWord(option)
+                    || isTravelWord(target)
+                    || isExplicitTeleportText(option)
+                    || isExplicitTeleportText(target);
+
+            default:
+                return false;
+        }
+    }
+
+    private boolean isWidgetAction(MenuAction action)
+    {
+        switch (action)
+        {
+            case CC_OP:
+            case CC_OP_LOW_PRIORITY:
+            case WIDGET_FIRST_OPTION:
+            case WIDGET_SECOND_OPTION:
+            case WIDGET_THIRD_OPTION:
+            case WIDGET_FOURTH_OPTION:
+            case WIDGET_FIFTH_OPTION:
+            case WIDGET_TYPE_1:
+            case WIDGET_TYPE_4:
+            case WIDGET_TYPE_5:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private boolean isExplicitTeleportText(String text)
+    {
+        if (text == null || text.isEmpty())
+        {
+            return false;
+        }
+
+        return text.contains("teleport")
+            || text.equals("tele")
+            || text.startsWith("tele ")
+            || text.contains(" teleport")
+            || text.contains("home teleport")
+            || text.contains("minigame teleport")
+            || text.contains("destination")
+            || text.contains("to house")
+            || text.equals("poh")
+            || text.contains("fairy ring")
+            || text.contains("spirit tree")
+            || text.contains("transport");
+    }
+
+    private boolean isTravelWord(String text)
+    {
+        if (text == null || text.isEmpty())
+        {
+            return false;
+        }
+
+        return text.equals("travel")
+            || text.startsWith("travel ")
+            || text.equals("transport")
+            || text.startsWith("transport ")
+            || text.equals("teleport")
+            || text.equals("tele")
+            || text.equals("leave")
+            || text.equals("depart")
+            || text.equals("destination");
+    }
+
+    private boolean looksLikeTeleportSpell(String target)
+    {
+        if (target == null || target.isEmpty())
+        {
+            return false;
+        }
+
+        return target.contains("teleport")
+            || target.contains("tele ")
+            || target.equals("tele")
+            || target.contains("home")
+            || target.contains("house")
+            || target.contains("varrock")
+            || target.contains("lumbridge")
+            || target.contains("falador")
+            || target.contains("camelot")
+            || target.contains("ardougne")
+            || target.contains("watchtower")
+            || target.contains("trollheim")
+            || target.contains("kourend")
+            || target.contains("edgeville")
+            || target.contains("kharyrll")
+            || target.contains("senntisten")
+            || target.contains("barbarian")
+            || target.contains("ape atoll")
+            || target.contains("carrallangar")
+            || target.contains("ferox")
+            || target.contains("cemetery")
+            || target.contains("barrows")
+            || target.contains("corporeal")
+            || target.contains("paddewwa")
+            || target.contains("canifis")
+            || target.contains("battlefield");
+    }
+
+    private boolean looksLikeTeleportItem(String target)
+    {
+        if (target == null || target.isEmpty())
+        {
+            return false;
+        }
+
+        return target.contains("teleport")
+            || target.contains("tablet")
+            || target.contains("scroll")
+            || target.contains("seed pod")
+            || target.contains("ectophial")
+            || target.contains("amulet of glory")
+            || target.contains("ring of wealth")
+            || target.contains("ring of dueling")
+            || target.contains("ring of duel")
+            || target.contains("games necklace")
+            || target.contains("combat bracelet")
+            || target.contains("skills necklace")
+            || target.contains("slayer ring")
+            || target.contains("ring of the elements")
+            || target.contains("xeric")
+            || target.contains("digsite pendant")
+            || target.contains("construction cape")
+            || target.contains("max cape")
+            || target.contains("skillcape")
+            || target.contains("achievement diary cape")
+            || target.contains("quest point cape")
+            || target.contains("music cape")
+            || target.contains("arceuus")
+            || target.contains("book of the dead")
+            || target.contains("book of dead")
+            || target.contains("occult altar")
+            || target.contains("royal seed pod");
+    }
+
+    private String clean(String text)
+    {
+        if (text == null)
+        {
+            return "";
+        }
+
+        return text
+            .toLowerCase()
+            .replaceAll("<[^>]*>", "")
+            .trim();
+    }
+
+    @Provides
+    PreventTpAtMortimer provideConfig(ConfigManager configManager)
+    {
+        return configManager.getConfig(PreventTpAtMortimer.class);
+    }
+}
