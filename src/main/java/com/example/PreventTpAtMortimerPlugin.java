@@ -240,6 +240,17 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return true;
         }
 
+        /*
+         * Normal equipment actions must never be blocked just because
+         * the item itself also has a teleport function.
+         */
+        if (option.equals("wear")
+            || option.equals("wield")
+            || option.equals("equip"))
+        {
+            return false;
+        }
+
         if (option.equals("rub")
             || option.equals("break")
             || option.equals("activate"))
@@ -275,6 +286,21 @@ public class PreventTpAtMortimerPlugin extends Plugin
         if (!isWidgetAction(action))
         {
             return false;
+        }
+
+        /*
+         * The Ardougne cloak's equipped teleport is a CC_OP action:
+         *
+         * option = "kandarin monastery"
+         * target = "ardougne cloak 2"
+         *
+         * The widget action list from the live debug test confirmed
+         * that this is the actual teleport option.
+         */
+        if (action == MenuAction.CC_OP
+            && isMonasteryTeleport(option, target))
+        {
+            return true;
         }
 
         if (option.equals("cast"))
@@ -316,6 +342,12 @@ public class PreventTpAtMortimerPlugin extends Plugin
         }
 
         return false;
+    }
+
+    private boolean isMonasteryTeleport(String option, String target)
+    {
+        return option.equals("kandarin monastery")
+            && target.contains("ardougne cloak");
     }
 
     private boolean isTravelWorldAction(
