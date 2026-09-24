@@ -197,6 +197,20 @@ public class PreventTpAtMortimerPlugin extends Plugin
         String option = clean(event.getMenuOption());
         String target = clean(event.getMenuTarget());
 
+        /*
+         * These actions are never teleport actions.
+         *
+         * This check is deliberately FIRST so a teleport-capable cape,
+         * jewelry item, or other equipment can always be equipped or worn.
+         */
+        if (isEquipmentAction(option))
+        {
+            return false;
+        }
+
+        /*
+         * Explicit teleport wording on the actual clicked option/target.
+         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
@@ -224,6 +238,13 @@ public class PreventTpAtMortimerPlugin extends Plugin
         return false;
     }
 
+    private boolean isEquipmentAction(String option)
+    {
+        return option.equals("wear")
+            || option.equals("wield")
+            || option.equals("equip");
+    }
+
     private boolean isTeleportItemAction(
         MenuOptionClicked event,
         String option,
@@ -234,6 +255,26 @@ public class PreventTpAtMortimerPlugin extends Plugin
             return false;
         }
 
+        /*
+         * Item operation 2 is the normal Wear/Wield/Equip operation.
+         * Never block it.
+         */
+        if (event.getItemOp() == 2)
+        {
+            return false;
+        }
+
+        /*
+         * Other equipment actions are also harmless.
+         */
+        if (isEquipmentAction(option))
+        {
+            return false;
+        }
+
+        /*
+         * Teleport items that explicitly identify themselves.
+         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
@@ -241,21 +282,23 @@ public class PreventTpAtMortimerPlugin extends Plugin
         }
 
         /*
-         * Normal equipment actions must never be blocked just because
-         * the item itself also has a teleport function.
+         * Common teleport-item activation actions.
          */
-        if (option.equals("wear")
-            || option.equals("wield")
-            || option.equals("equip"))
-        {
-            return false;
-        }
-
         if (option.equals("rub")
             || option.equals("break")
-            || option.equals("activate"))
+            || option.equals("activate")
+            || option.equals("operate"))
         {
             return looksLikeTeleportItem(target);
+        }
+
+        /*
+         * Teleport-capable capes/cloaks can use custom menu options
+         * such as "monastery teleport" or "farm teleport".
+         */
+        if (looksLikeCapeOrCloak(target))
+        {
+            return isCapeTeleportOption(option);
         }
 
         return false;
@@ -268,6 +311,18 @@ public class PreventTpAtMortimerPlugin extends Plugin
     {
         MenuAction action = event.getMenuAction();
 
+        /*
+         * Never block actual equipment actions, regardless of what
+         * other actions happen to exist on the same widget.
+         */
+        if (isEquipmentAction(option))
+        {
+            return false;
+        }
+
+        /*
+         * Spell/widget targeting actions.
+         */
         if (action == MenuAction.WIDGET_TARGET
             || action == MenuAction.WIDGET_TARGET_ON_GAME_OBJECT
             || action == MenuAction.WIDGET_TARGET_ON_NPC
@@ -289,65 +344,62 @@ public class PreventTpAtMortimerPlugin extends Plugin
         }
 
         /*
-         * The Ardougne cloak's equipped teleport is a CC_OP action:
-         *
-         * option = "kandarin monastery"
-         * target = "ardougne cloak 2"
-         *
-         * The widget action list from the live debug test confirmed
-         * that this is the actual teleport option.
+         * Cape teleport actions can be CC_OP or CC_OP_LOW_PRIORITY.
+         * Check the actual clicked option, never the entire widget's
+         * available action list.
          */
-        if (action == MenuAction.CC_OP
-            && isMonasteryTeleport(option, target))
+        if (looksLikeCapeOrCloak(target)
+            && isCapeTeleportOption(option))
         {
             return true;
         }
 
+        /*
+         * Normal spell casting.
+         */
         if (option.equals("cast"))
         {
             return looksLikeTeleportSpell(target);
         }
 
+        /*
+         * Explicit teleport wording on the actual clicked action.
+         */
         if (isExplicitTeleportText(option)
             || isExplicitTeleportText(target))
         {
             return true;
         }
 
-        Widget widget = event.getWidget();
-
-        if (widget == null)
-        {
-            return false;
-        }
-
-        String[] actions = widget.getActions();
-
-        if (actions == null)
-        {
-            return false;
-        }
-
-        for (String widgetAction : actions)
-        {
-            if (widgetAction == null)
-            {
-                continue;
-            }
-
-            if (isExplicitTeleportText(clean(widgetAction)))
-            {
-                return true;
-            }
-        }
-
         return false;
     }
 
-    private boolean isMonasteryTeleport(String option, String target)
+    private boolean looksLikeCapeOrCloak(String target)
     {
-        return option.equals("kandarin monastery")
-            && target.contains("ardougne cloak");
+        if (target == null || target.isEmpty())
+        {
+            return false;
+        }
+
+        return target.contains("cape")
+            || target.contains("cloak");
+    }
+
+    private boolean isCapeTeleportOption(String option)
+    {
+        if (option == null || option.isEmpty())
+        {
+            return false;
+        }
+
+        return option.contains("teleport")
+            || option.contains("monastery")
+            || option.contains("farm")
+            || option.contains("guild")
+            || option.contains("house")
+            || option.contains("tele")
+            || option.contains("destination")
+            || option.contains("travel");
     }
 
     private boolean isTravelWorldAction(
